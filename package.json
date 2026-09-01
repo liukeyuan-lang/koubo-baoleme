@@ -1,0 +1,32 @@
+{
+  "name": "koubo-baoleme",
+  "version": "2.2.0",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js && node --check browser-extension/popup.js && node --check lib/providers/index.js && node --check lib/providers/common.js && node --check lib/source-evidence.js && node --check lib/evidence-research.js && node --check lib/semantic-edit-router.js && node --check lib/recording-export.js && node --check lib/media.js && node --check lib/local-asr.js && node --check lib/audience-engagement.js && node --check lib/content-editor.js && node --check scripts/v22-tests.js && node --check scripts/video-poc-render.js && node --check scripts/audience-engagement-tests.js && node --check scripts/goal-revision-regression.js && node --check scripts/content-editor-regression.js && node --check scripts/semantic-edit-router-tests.js && node --check scripts/feedback-router-regression.js && node --check scripts/long-video-media-regression.js && node --check scripts/evidence-research-tests.js && node --check scripts/recording-mp4-export-tests.js && python3 -m py_compile scripts/local_asr_worker.py",
+    "test:audience": "node scripts/audience-engagement-tests.js",
+    "test:goal-revision": "node scripts/goal-revision-regression.js",
+    "test:content-editor": "node scripts/content-editor-regression.js",
+    "test:semantic-router": "node scripts/semantic-edit-router-tests.js",
+    "test:feedback-router": "node scripts/feedback-router-regression.js",
+    "test:long-video": "node scripts/long-video-media-regression.js",
+    "test:local-asr-entry": "node scripts/local-asr-entry-regression.js",
+    "test:evidence-research": "node scripts/evidence-research-tests.js",
+    "test:recording-mp4": "node scripts/recording-mp4-export-tests.js",
+    "test:v22": "node scripts/v22-tests.js",
+    "test:p051": "node scripts/p051-tests.js"
+    ,"test:generation-pipeline": "node scripts/generation-pipeline-tests.js"
+    ,"test:generation-api": "node scripts/generation-api-tests.js"
+    ,"test:selection-rewrite": "node scripts/selection-rewrite-tests.js"
+    ,"test:llm-live": "LLM_MODE=live node scripts/content-editor-regression.js"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "hyperframes": "^0.8.16"
+  }
+}

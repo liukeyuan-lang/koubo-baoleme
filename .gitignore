@@ -1,0 +1,10 @@
+.env
+node_modules/
+.venv/
+.DS_Store
+*.log
+__pycache__/
+*.pyc
+browser-extension/*.zip
+video-poc/assets/*
+video-poc/jobs/*

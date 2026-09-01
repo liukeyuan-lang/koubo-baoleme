@@ -1,0 +1,10 @@
+.env
+.git
+.gitignore
+.venv
+node_modules
+*.log
+video-poc/assets/*
+video-poc/jobs/*
+browser-extension/*.zip
+.DS_Store

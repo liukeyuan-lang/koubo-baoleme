@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="从验证过的爆款里，写出属于你的口播稿。" />
+    <title>口播爆了么</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="口播爆了么首页">
+        <span class="brand-mark">爆</span>
+        <span>口播爆了么</span>
+      </a>
+      <nav class="main-nav" aria-label="主导航"><button class="active" data-module="home" type="button">首页</button><button data-module="cases" type="button">我的案例</button><button data-module="mine" type="button">我的</button></nav>
+      <div class="topbar-actions">
+        <span class="tagline">不从空白开始，从爆过的开始</span>
+        <button class="persona-entry auth-entry" id="auth-entry" type="button" disabled>登录</button>
+      </div>
+    </header>
+
+    <dialog class="auth-dialog" id="auth-dialog">
+      <form id="auth-form">
+        <p class="eyebrow">口播爆了么</p>
+        <h2 id="auth-title">登录后继续创作</h2>
+        <p class="auth-copy">你的 Supabase 账号用于保护分析额度，后续也会用于同步创作项目。</p>
+        <label class="field"><span>邮箱</span><input id="auth-email" type="email" autocomplete="email" required placeholder="name@example.com" /></label>
+        <label class="field"><span>密码</span><input id="auth-password" type="password" autocomplete="current-password" minlength="6" required placeholder="至少 6 位" /></label>
+        <p class="form-error" id="auth-error" role="alert"></p>
+        <button class="primary-button" id="auth-submit" type="submit">登录</button>
+        <button class="secondary-button" id="auth-mode" type="button">还没有账号？注册</button>
+        <button class="text-button" id="auth-signout" type="button" hidden>退出登录</button>
+      </form>
+    </dialog>
+
+    <main id="top">
+      <section class="module-view mine-view" id="mine-view" hidden>
+        <div class="module-heading"><p class="eyebrow">我的</p><h1>让每一篇内容，<br /><span>越来越像你。</span></h1><p>管理你的 Creator DNA、Voice DNA 和表达偏好。</p></div>
+      <section class="persona-panel" id="persona-panel" hidden>
+        <div class="persona-panel-head">
+          <div><p class="eyebrow">我的创作 DNA</p><h2>让每一稿都更像你</h2></div>
+          <button class="close-button" id="persona-close" type="button" aria-label="关闭">×</button>
+        </div>
+        <form id="persona-form">
+          <label class="field"><span>我是谁？ <em>可选</em></span><input id="identity" maxlength="100" placeholder="刚转型 AI 产品经理的普通职场人" /></label>
+          <label class="field"><span>我主要讲什么？ <b>必填</b></span><input id="content-direction" required maxlength="120" placeholder="AI 工具、职业转型、普通人学习 AI" /></label>
+          <label class="field"><span>我的目标用户是谁？ <b>必填</b></span><input id="persona-audience" required maxlength="120" placeholder="想学习 AI 但不知道如何开始的职场新人" /></label>
+          <label class="field field-wide"><span>我的个人经历 / 故事 <em>可选，可在创作中逐步沉淀</em></span><textarea id="personal-story" maxlength="400" placeholder="做了 4 年售后工程师，后来开始学习 AI 和产品经理。"></textarea></label>
+          <label class="field field-wide"><span>我的表达风格 <em>可选</em></span><select id="speaking-style"><option>真诚直接</option><option>理性专业</option><option>轻松有梗</option><option>温和陪伴</option></select></label>
+          <label class="field"><span>主要发布平台 <em>可选</em></span><select id="preferred-platform"><option value="通用短视频">通用短视频</option><option value="抖音">抖音</option><option value="小红书">小红书</option><option value="视频号">视频号</option><option value="B站">B站</option></select></label>
+          <label class="field"><span>这类内容主要为了什么？ <em>可选</em></span><select id="content-goal"><option value="建立信任">建立信任</option><option value="分享经验">分享经验</option><option value="表达观点">表达观点</option><option value="提供方法">提供方法</option><option value="促进互动">促进互动</option><option value="产品获客">产品获客</option></select></label>
+          <label class="field"><span>标题倾向 <em>可选</em></span><select id="title-style"><option value="真实克制">真实克制</option><option value="直接说结果">直接说结果</option><option value="问题引导">问题引导</option><option value="反差好奇">反差好奇</option><option value="搜索友好">搜索友好</option></select></label>
+          <label class="field"><span>结尾互动 <em>可选</em></span><select id="cta-preference"><option value="不主动号召">不主动号召</option><option value="自然邀请讨论">自然邀请讨论</option><option value="明确行动号召">明确行动号召</option></select></label>
+          <label class="field field-wide"><span>不想出现的表达 <em>可选，用逗号或换行分隔</em></span><textarea id="forbidden-expressions" maxlength="500" placeholder="例如：家人们、颠覆认知、你一定可以、点赞收藏"></textarea><small>只限制表达方式，不会改变你的真实素材。</small></label>
+          <label class="field field-wide"><span>让 AI 更懂你的表达 <em>可选</em></span><textarea id="voice-sample" maxlength="6000" placeholder="粘贴你以前的口播稿、小红书正文，或一段你真实说过的话。表达特征由 AI 自动学习。"></textarea><small id="voice-status"></small></label>
+          <button class="primary-button" type="submit">保存我的创作 DNA</button>
+        </form>
+      </section>
+      <section class="extension-connect" id="extension-connect">
+        <div><p class="eyebrow">浏览器扩展</p><h2>连接你的小红书扩展</h2><p>每个账号使用独立连接码。数据库只保存哈希，完整连接码只在创建时显示一次。</p></div>
+        <button class="secondary-button" id="create-extension-token" type="button">生成连接码</button>
+        <div class="extension-token-result" id="extension-token-result" hidden><code id="extension-token-value"></code><button class="text-button" id="copy-extension-token" type="button">复制连接码</button><small>请粘贴到扩展的“连接密钥”中。关闭后无法再次查看，可随时重新生成。</small></div>
+        <p class="form-error" id="extension-token-error"></p>
+      </section>
+      </section>
+      <section class="module-view cases-view" id="cases-view" hidden><div class="module-heading"><p class="eyebrow">我的案例</p><h1>你的内容，<br /><span>都在这里。</span></h1><p>继续编辑草稿、待拍稿，以及你导入过的参考内容。</p></div><div class="cases-split"><section><h2>创作项目</h2><div id="my-project-list"></div></section><section><h2>导入的参考案例</h2><div id="my-reference-list"></div></section></div></section>
+      <section class="hero home-module" id="home">
+        <p class="eyebrow">今天从哪里开始？</p>
+        <h1>把真实想法，<br /><span>变成你能说出口的内容。</span></h1>
+        <div class="task-entries">
+          <article><h2>参考一个爆款，写成你的版本</h2><p>粘贴一条你觉得不错的内容，AI 帮你判断为什么有效、哪些值得学，再结合你的真实经历生成自己的口播稿。</p><button class="primary-button" id="start-reference" type="button">参考爆款开始</button></article>
+          <article><h2>我已经有一个想法</h2><p>输入你的经历、观点或方法，AI 帮你整理成自然可说的口播内容。</p><button class="secondary-button" id="start-idea" type="button">从想法开始</button></article>
+        </div>
+        <section class="recent-projects"><div class="mini-heading"><h2>最近项目</h2><button class="text-button" id="show-all-projects" type="button">查看全部</button></div><div id="project-list"></div></section>
+      </section>
+
+      <section class="library home-module" id="library">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">精选参考案例</p>
+            <h2>选择或输入一个参考</h2>
+            <p class="data-note">下方案例为模拟演示，不代表真实账号数据；你通过链接解析的内容会标记为“真实采集”。</p>
+          </div>
+          <div class="filters" id="filters" aria-label="内容领域筛选"></div>
+        </div>
+        <div class="link-parser">
+          <div><p class="eyebrow">你发现的爆款</p><h3>解析一个你觉得很爆的内容</h3></div>
+          <form id="link-form" novalidate><input id="post-url" type="text" inputmode="url" placeholder="粘贴小红书链接或整段分享文案" required /><button class="primary-button" type="submit">开始解析</button></form>
+          <p class="parser-status" id="parser-status" aria-live="polite"></p>
+          <div class="manual-fallback" id="manual-fallback" hidden>
+            <p><strong>链接没读到也没关系。</strong>粘贴你能看到的内容，仍然可以继续拆解。</p>
+            <div class="fallback-tabs"><button class="filter-button active" data-fallback="text" type="button">手动内容</button><button class="filter-button" data-fallback="media" type="button">截图 / 视频</button></div>
+            <form id="manual-case-form">
+              <div id="manual-text-fields">
+                <select id="manual-content-type"><option value="image_text">图文笔记</option><option value="video">视频逐字稿</option></select>
+                <input id="manual-title" placeholder="标题" required />
+                <textarea id="manual-content" placeholder="正文或视频逐字稿" required></textarea>
+                <div class="metric-inputs"><input id="manual-likes" type="number" min="0" placeholder="点赞" /><input id="manual-collects" type="number" min="0" placeholder="收藏" /><input id="manual-comments-count" type="number" min="0" placeholder="评论数" /></div>
+                <textarea id="manual-comments" placeholder="可选：粘贴几条高赞评论，每行一条"></textarea>
+              </div>
+              <div id="manual-media-fields" hidden>
+                <label class="upload-box">选择帖子截图或视频<input id="manual-media" type="file" accept="image/*,video/*" /></label>
+                <p class="data-note">当前版本不会上传文件到第三方；视频可先把逐字稿粘贴到正文框继续。</p>
+              </div>
+              <button class="secondary-button" type="submit">使用这条内容继续</button>
+            </form>
+          </div>
+        </div>
+        <div class="case-grid" id="case-grid"></div>
+        <div class="empty-state" id="empty-state" hidden>这个领域还没有精选案例。</div>
+      </section>
+
+      <section class="workspace" id="workspace" hidden>
+        <button class="back-button" id="back-button" type="button">← 返回爆款库</button>
+
+        <div class="case-detail">
+          <div class="detail-intro">
+            <div class="platform-line">
+              <span class="platform-badge" id="detail-platform"></span>
+              <span id="detail-metrics"></span>
+            </div>
+            <h2 id="detail-title"></h2>
+            <p class="original-copy" id="detail-preview"></p>
+            <div class="tag-list" id="detail-tags"></div>
+            <div class="source-evidence" id="source-evidence" hidden></div>
+          </div>
+
+          <div class="analysis-panel">
+            <p class="eyebrow">AI 爆款拆解</p>
+            <h3 id="analysis-heading">它为什么能火？</h3>
+            <div class="decision-summary" id="decision-summary"></div>
+            <button class="secondary-button" id="retry-analysis-button" type="button" hidden>重新进行 AI 爆款分析</button>
+            <details class="full-analysis"><summary>查看完整分析</summary><div class="analysis-grid" id="analysis-grid"></div><div class="structure-box"><span>原内容怎么展开 · 仅供理解</span><ol id="structure-list"></ol></div></details>
+            <div class="learning-guide" id="learning-guide" hidden></div>
+            <button class="primary-button" id="start-writing" type="button">就按这个思路写我的版本</button>
+          </div>
+        </div>
+
+        <div class="composer" id="composer" hidden>
+          <div class="composer-heading">
+            <p class="eyebrow">轮到你的内容</p>
+            <h3>不用先会写，先把真实内容说出来</h3>
+            <p>我会像聊天一样一次问一个问题，再帮你整理成可以生成的素材。</p>
+          </div>
+          <section class="guided-chat" id="guided-chat">
+            <div class="guided-chat-head"><div><span>内容引导助手</span><strong id="guide-progress">第 1 步，共 4 步</strong></div><button id="skip-guide" type="button">我想直接填写</button></div>
+            <div class="chat-thread" id="chat-thread" aria-live="polite"></div>
+            <div class="guide-choices" id="guide-choices"></div>
+            <label class="guide-answer" id="guide-answer-wrap" hidden><span class="sr-only">回答当前问题</span><textarea id="guide-answer" maxlength="500" placeholder="像平时聊天一样说就行，不用组织成文案"></textarea></label>
+            <div class="guide-actions"><button class="primary-button" id="guide-next" type="button" hidden>继续</button></div>
+          </section>
+          <div class="creation-reference" id="creation-reference"></div>
+          <form id="script-form">
+            <div class="material-guide field-wide">
+              <span class="guide-title" id="rebuild-title">把你的内容放进这条爆款的结构里</span>
+              <p class="reference-note" id="rebuild-hint">填写你的事实、观点或案例。AI 会用上方参考内容的传播结构重新组织，而不会套固定模板。</p>
+            </div>
+            <label class="field field-wide">
+              <span id="material-label">我的口述补充 <em>可选</em></span>
+              <small id="material-hint">不需要重新写一篇。可选地告诉我：你想怎么讲、哪些地方你认同、或想加入哪一句自己的感悟。</small>
+              <textarea id="current-material" maxlength="1200" placeholder="例如：这条我最认同的是___；我想把语气讲得更___；最后我想补一句___。"></textarea>
+              <div class="voice-capture">
+                <button type="button" class="secondary-button" id="dictation-toggle">🎙 开始口述</button>
+                <span id="dictation-status">录音后会生成可修改的识别结果；确认提交后才会用于后续生成。</span>
+              </div>
+            </label>
+            <label class="field">
+              <span>你想说给谁听 <em>可选</em></span>
+              <input id="audience" maxlength="80" placeholder="例如：和我一样想转AI产品的普通职场人" />
+            </label>
+            <label class="field">
+              <span>口播时长 <em>可选</em></span>
+              <select id="duration">
+                <option value="60">约 60 秒</option>
+                <option value="30">约 30 秒</option>
+                <option value="90">约 90 秒</option>
+              </select>
+            </label>
+            <p class="form-error" id="form-error" role="alert"></p>
+            <div class="follow-up" id="follow-up" hidden><label class="field field-wide"><span id="follow-up-question"></span><textarea id="follow-up-answer" maxlength="1000" placeholder="只说真实发生过的情况；没有也可以直接说没有"></textarea></label><p class="reference-note" id="evidence-duration-note" hidden></p><button class="secondary-button" id="evidence-skip" type="button" hidden>不补充，按推荐时长生成</button></div>
+            <button class="primary-button generate-button" type="submit">
+              <span class="button-label">生成我的口播稿</span>
+              <span class="loader" aria-hidden="true"></span>
+            </button>
+          </form>
+          <section class="direction-panel" id="direction-panel" hidden>
+            <p class="eyebrow">内容方向确认</p>
+            <h3>这次你真正想讲哪个？</h3>
+            <p class="reference-note">这些不是标题，而是不同的核心判断。最多选择两个相关方向合并。</p>
+            <div class="direction-source-summary" id="direction-source-summary"></div>
+            <div class="direction-cards" id="direction-cards"></div>
+            <div class="direction-custom" id="direction-custom" hidden><label class="field field-wide"><span>用你自己的话说，这次真正想讲什么？</span><textarea id="custom-direction" maxlength="500" placeholder="例如：我不想讲AI多厉害，我想讲做出来以后为什么仍然容易做浅。"></textarea></label></div>
+            <p class="form-error" id="direction-error"></p>
+            <div class="direction-actions"><button class="secondary-button" id="custom-direction-button" type="button">都不是，我自己说</button><button class="primary-button" id="confirm-direction" type="button">确认这个方向并生成</button></div>
+          </section>
+        </div>
+
+        <div class="result" id="result" hidden>
+          <div class="result-refining" id="result-refining" hidden><div><span class="loader"></span><strong id="refining-stage">正在按你的要求改写</strong><small>当前稿件会保留，完成后直接替换为新版本</small></div></div>
+          <section class="fallback-banner" id="fallback-banner" hidden><strong>临时草稿</strong><p>AI 本次生成超时，下面内容仅根据你的原始素材整理，还没有完成正式的个性化生成。</p><button class="primary-button" id="retry-formal" type="button">重新生成正式版本</button></section>
+          <div class="result-top">
+            <div>
+              <p class="eyebrow">你的口播稿</p>
+              <h3 id="result-title"></h3><div class="title-candidates" id="title-candidates"></div>
+            </div>
+            <span class="duration-chip" id="result-duration"></span>
+          </div>
+          <section class="blind-test" id="blind-test" hidden><div><strong>完整稿盲测</strong><span>两份稿件由不同模型生成，请只按内容选择。</span></div><button class="active" data-candidate="A" type="button">A 稿</button><button data-candidate="B" type="button">B 稿</button><button class="text-button" id="choose-candidate" type="button">这版更好</button></section>
+          <div class="script-modes" role="tablist"><button class="active" data-script-mode="natural" type="button">自然口语版</button><button data-script-mode="outline" type="button">提纲开口版</button></div>
+          <p class="variant-edit-note" id="variant-edit-note">当前查看“自然口语版”。局部修改只影响正文，不会同步改动提纲版。</p>
+          <div class="hook-card" id="hook-card">
+            <span>开头第一句 · 前 3 秒</span>
+            <p id="result-hook"></p>
+            <small>说完直接接下一段，不需要切场</small>
+          </div>
+          <div class="script-body" id="script-body"></div>
+          <div class="ai-explanation" id="ai-explanation"></div>
+          <div class="result-actions">
+            <button class="primary-button" id="copy-button" type="button">复制全文</button>
+            <button class="secondary-button" id="regenerate-button" type="button">重新生成</button>
+            <button class="secondary-button" id="restore-previous-button" type="button" hidden>恢复上一版</button>
+            <button class="secondary-button" id="local-rewrite-button" type="button">这段不对劲</button>
+            <button class="primary-button ready-button" id="ready-button" type="button">这篇可以拍</button>
+          </div>
+          <section class="shoot-plan" id="shoot-plan" hidden>
+            <div class="shoot-plan-head"><div><p class="eyebrow">接下来就去拍</p><h3>这篇的拍摄任务</h3></div><span class="shoot-progress" id="shoot-progress">0 / 3</span></div>
+            <label class="shoot-date"><span>计划什么时候拍？</span><input id="shoot-date" type="datetime-local" /></label>
+            <div class="shoot-tasks" id="shoot-tasks">
+              <button type="button" data-shoot-task="prepared"><span class="task-check">✓</span><span><strong>准备好拍摄</strong><small>确认场地、提词稿和需要出镜的素材</small></span></button>
+              <button type="button" data-shoot-task="filmed"><span class="task-check">✓</span><span><strong>完成拍摄</strong><small>拍完后点一下，稿件会进入“已拍”</small></span></button>
+              <button type="button" data-shoot-task="published"><span class="task-check">✓</span><span><strong>已经发布</strong><small>完成这篇内容，后续可继续做数据复盘</small></span></button>
+            </div>
+            <p class="shoot-plan-status" id="shoot-plan-status"></p>
+            <div class="studio-entry"><button class="primary-button" id="open-studio" type="button">在这里直接拍摄</button></div>
+            <section class="recording-studio" id="recording-studio" hidden>
+              <div class="studio-head"><div><p class="eyebrow">内部拍摄台</p><h3>看着提词器，直接录</h3></div><button class="text-button" id="close-studio" type="button">收起拍摄台</button></div>
+              <div class="studio-layout">
+                <div class="camera-stage">
+                  <video id="camera-preview" autoplay muted playsinline></video>
+                  <video id="recording-preview" controls playsinline hidden></video>
+                  <span class="recording-badge" id="recording-badge" hidden><i></i> 正在录制 <b id="recording-time">00:00</b></span>
+                  <p class="camera-placeholder" id="camera-placeholder">点击“打开摄像头”开始准备</p>
+                </div>
+                <div class="teleprompter">
+                  <div class="teleprompter-head"><div><strong>AI 跟随提词器</strong><button class="import-script-button" id="import-current-script" type="button">一键导入当前稿</button></div><span id="follow-status">可直接点击正文编辑</span></div>
+                  <div class="teleprompter-script" id="teleprompter-script"></div>
+                  <div class="teleprompter-controls"><label>字号 <input id="prompter-size" type="range" min="22" max="48" value="32" /></label><button class="text-button" id="prompter-prev" type="button">上一句</button><button class="text-button" id="prompter-next" type="button">下一句</button></div>
+                </div>
+              </div>
+              <div class="studio-actions">
+                <button class="secondary-button" id="enable-camera" type="button">打开摄像头</button>
+                <button class="primary-button" id="start-recording" type="button" disabled>开始拍摄</button>
+                <button class="secondary-button danger-button" id="stop-recording" type="button" hidden>完成拍摄</button>
+                <a class="primary-button" id="export-recording" download hidden>导出录像</a>
+                <button class="secondary-button" id="retake-recording" type="button" hidden>重新拍摄</button>
+                <button class="secondary-button" id="new-recording" type="button" hidden>再拍一条</button>
+              </div>
+              <p class="studio-status" id="studio-status">录像只保存在当前浏览器中，不会自动上传。</p>
+            </section>
+          </section>
+          <section class="feedback-panel">
+            <div><span>这篇你愿意拍吗？</span><div class="choice-row" id="shootability"><button type="button">直接可以拍</button><button type="button">小改可以拍</button><button type="button">需要大改</button><button type="button">不会拍</button></div></div>
+            <div><span>像你自己会说的话吗？</span><div class="score-row" id="persona-score"><button type="button" data-score="1">1</button><button type="button" data-score="2">2</button><button type="button" data-score="3">3</button><button type="button" data-score="4">4</button><button type="button" data-score="5">5</button></div></div>
+            <p class="copy-status" id="feedback-status"></p>
+          </section>
+          <section class="asset-save-prompt" id="asset-save-prompt" hidden><div><strong>是否将这段经历保存到你的内容资产？</strong><p>以后生成时可以继续使用这段真实素材。</p></div><button class="primary-button" id="save-story" type="button">保存</button><button class="text-button" id="skip-story" type="button">不保存</button></section>
+          <section class="video-maker" id="video-maker" hidden>
+            <div class="video-maker-head">
+              <div><p class="eyebrow">视频实验版</p><h3>把这篇口播稿生成竖屏视频</h3></div>
+              <span class="duration-chip">目标约 60 秒</span>
+            </div>
+            <p class="video-maker-note">上传本人、产品或过程截图，系统会生成 AI 旁白、动态字幕和 9:16 MP4。素材只用于当前生成。</p>
+            <label class="asset-picker"><span>添加真实素材（可多选）</span><input id="video-assets" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple /><small id="asset-summary">未添加素材时，将使用当前产品界面和文字卡片完成验证。</small></label>
+            <div class="video-actions"><button class="primary-button" id="generate-video" type="button">生成视频</button><span id="video-status" role="status">等待生成</span></div>
+            <div class="video-preview" id="video-preview" hidden><video id="result-video" controls playsinline></video><a class="secondary-button" id="download-video" download>下载 MP4</a></div>
+          </section>
+          <p class="copy-status" id="copy-status" aria-live="polite"></p>
+        </div>
+        <div class="result timeout-result" id="timeout-result" hidden>
+          <p class="eyebrow">生成未完成</p><h3>这次生成比平时慢了一点</h3>
+          <p>你的内容已经保存，可以重新生成。</p>
+          <div class="result-actions"><button class="primary-button" id="timeout-retry" type="button">重新生成</button><button class="secondary-button" id="show-structure-draft" type="button">查看结构草稿</button></div>
+          <div id="structure-draft" hidden></div>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="personalize-dialog">
+      <form method="dialog" id="personalize-form"><button class="close-button dialog-close" value="cancel" aria-label="关闭">×</button><p class="eyebrow">更像我一点</p><h3>哪里不像你？</h3><div class="reason-grid"><button type="button" data-reason="太专业">太专业</button><button type="button" data-reason="太鸡汤">太鸡汤</button><button type="button" data-reason="太夸张">太夸张</button><button type="button" data-reason="太像AI">太像AI</button><button type="button" data-reason="太书面">太书面</button><button type="button" data-reason="不像我说话">不像我说话</button><button type="button" data-reason="经历不真实">经历不真实</button><button type="button" data-reason="太啰嗦">太啰嗦</button><button type="button" data-reason="其他">其他</button></div><textarea id="personalize-note" placeholder="可选：补充一句你的真实说法"></textarea><button class="primary-button" id="apply-personalize" value="default">按我的反馈调整</button></form>
+    </dialog>
+    <dialog id="rewrite-dialog"><form method="dialog" id="rewrite-form"><button class="close-button dialog-close" value="cancel" aria-label="关闭">×</button><p class="eyebrow">局部修改</p><h3>这句话哪里不对？</h3><p id="selected-preview"></p><div class="reason-grid"><button type="button" data-local-reason="not_speakable">念着不顺</button><button type="button" data-local-reason="meaning_wrong">这不是我的意思</button><button type="button" data-local-reason="too_long">太啰嗦</button><button type="button" data-local-reason="not_me">这句话我不会这么说</button><button type="button" data-local-reason="manual">我自己改</button></div><label for="manual-replacement" class="rewrite-instruction-label">补充你希望怎么改 <span>选填，也可以直接口述</span></label><textarea id="manual-replacement" placeholder="例如：意思保留，但前半句太绕；我想直接说结论。"></textarea><p class="rewrite-instruction-tip">只会发送相邻语境和已确认的内容策略，不会重新生成整篇。</p><p class="form-error" id="rewrite-error"></p><button class="primary-button" id="apply-local-rewrite" value="default">只修改这句话</button></form></dialog>
+    <dialog id="regenerate-dialog"><form method="dialog" id="regenerate-form"><button class="close-button dialog-close" value="cancel" aria-label="关闭">×</button><p class="eyebrow">基于当前稿迭代</p><h3>这次想怎么改？</h3><p class="reference-note">会保留当前参考、口述补充和已经生成的核心内容，只按你的反馈调整。</p><div class="reason-grid"><button type="button" data-regenerate-reason="开头更抓人">开头更抓人</button><button type="button" data-regenerate-reason="更像口头说话">更像口头说话</button><button type="button" data-regenerate-reason="更短更利落">更短更利落</button><button type="button" data-regenerate-reason="展开更具体">展开更具体</button><button type="button" data-regenerate-reason="情绪更有共鸣">情绪更有共鸣</button><button type="button" data-regenerate-reason="保留原意换一种讲法">换一种讲法</button></div><textarea id="regenerate-note" placeholder="可选：例如“保留前半段，把结尾讲得更有力量”"></textarea><button class="primary-button" id="apply-regenerate" value="default">按这个方向重新生成</button></form></dialog>
+    <div class="generation-overlay" id="generation-overlay" hidden><div><span class="loader"></span><p id="generation-stage">正在理解你的内容</p></div></div>
+
+    <footer>口播爆了么 · 借传播机制，写自己的内容</footer>
+    <script src="app.js"></script>
+  </body>
+</html>

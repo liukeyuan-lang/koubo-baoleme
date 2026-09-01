@@ -495,11 +495,20 @@ function checkSourceRateLimit(req) {
   recent.push(now); sourceRateLimits.set(key, recent); return true;
 }
 
+function supabaseConfig() {
+  return {
+    url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
+  };
+}
+
 function supabaseConfigured() {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY);
+  const config = supabaseConfig();
+  return Boolean(config.url && config.publishableKey);
 }
 
 async function supabaseUser(req) {
+  const config = supabaseConfig();
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
   if (!token) { const error = new Error("请先登录"); error.code = "AUTH_REQUIRED"; throw error; }
   const cached = authTokenCache.get(token);
@@ -507,8 +516,8 @@ async function supabaseUser(req) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8_000);
   try {
-    const response = await fetch(`${process.env.SUPABASE_URL.replace(/\/$/, "")}/auth/v1/user`, {
-      headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` }, signal: controller.signal,
+    const response = await fetch(`${config.url.replace(/\/$/, "")}/auth/v1/user`, {
+      headers: { apikey: config.publishableKey, Authorization: `Bearer ${token}` }, signal: controller.signal,
     });
     if (!response.ok) { const error = new Error("登录已过期，请重新登录"); error.code = "AUTH_INVALID"; throw error; }
     const payload = await response.json();
@@ -519,9 +528,10 @@ async function supabaseUser(req) {
 }
 
 async function supabaseRpc(name, payload, authorization = "") {
-  const response = await fetch(`${process.env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/rpc/${name}`, {
+  const config = supabaseConfig();
+  const response = await fetch(`${config.url.replace(/\/$/, "")}/rest/v1/rpc/${name}`, {
     method: "POST",
-    headers: { apikey: process.env.SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) },
+    headers: { apikey: config.publishableKey, "Content-Type": "application/json", ...(authorization ? { Authorization: authorization } : {}) },
     body: JSON.stringify(payload || {}),
   });
   const data = await response.json().catch(() => null);
@@ -1257,7 +1267,7 @@ async function api(req, res) {
   try {
     if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" }); return res.end(); }
     const requestUrl = new URL(req.url, `http://${req.headers.host || "127.0.0.1"}`);
-    if (requestUrl.pathname === "/api/public-config" && req.method === "GET") return send(res, 200, { supabase: supabaseConfigured() ? { url: process.env.SUPABASE_URL, publishableKey: process.env.SUPABASE_PUBLISHABLE_KEY } : null });
+    if (requestUrl.pathname === "/api/public-config" && req.method === "GET") return send(res, 200, { supabase: supabaseConfigured() ? supabaseConfig() : null });
     if (requestUrl.pathname === "/api/auth/me" && req.method === "GET") return send(res, 200, { user: await supabaseUser(req) });
     const publicApi = requestUrl.pathname === "/api/health" || requestUrl.pathname === "/api/import-browser-post";
     if (supabaseConfigured() && !publicApi) req.authUser = await supabaseUser(req);

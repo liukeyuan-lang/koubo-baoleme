@@ -403,6 +403,13 @@ async function transcribeFileWithDashScope(file) {
     const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form, signal: controller.signal });
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
+      // Qwen ASR is exposed through DashScope's compatible chat-completions
+      // endpoint in regions/accounts where the OpenAI-style transcriptions
+      // route is unavailable. Reuse the existing input_audio implementation
+      // instead of failing the whole transcription job on a 404.
+      if (response.status === 404 && !process.env.DASHSCOPE_ASR_FILE_URL) {
+        return await transcribeLocalAudioWithDashScope(file);
+      }
       const error = new Error(`百炼本地音频转写失败 ${response.status}${detail ? `：${detail.slice(0, 300)}` : ""}`);
       error.code = "ASR_UPSTREAM_ERROR"; error.stage = "transcribe"; throw error;
     }

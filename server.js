@@ -231,8 +231,9 @@ function countValue(value) {
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function localAsrEnabled() { return process.env.LOCAL_ASR_ENABLED !== "false"; }
-function asrConfigured() { return localAsrEnabled() || Boolean(process.env.DASHSCOPE_API_KEY || process.env.OPENAI_API_KEY); }
+function asrConfigured() { return localAsrEnabled() || Boolean(process.env.GROQ_API_KEY || process.env.DASHSCOPE_API_KEY || process.env.OPENAI_API_KEY); }
 function configuredAsrProvider() {
+  if (process.env.GROQ_API_KEY) return "groq";
   if (process.env.DASHSCOPE_API_KEY) return "dashscope";
   if (process.env.OPENAI_API_KEY) return "openai";
   return localAsrEnabled() ? "local-funasr" : "";
@@ -422,6 +423,37 @@ async function transcribeFileWithDashScope(file) {
   } finally { clearTimeout(timeout); }
 }
 
+async function transcribeFileWithGroq(file) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("Groq ASR 尚未配置");
+  const endpoint = process.env.GROQ_ASR_URL || "https://api.groq.com/openai/v1/audio/transcriptions";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Math.min(300, Number(process.env.ASR_TIMEOUT_SECONDS || 180)) * 1000);
+  try {
+    const bytes = await fs.promises.readFile(file);
+    const form = new FormData();
+    const extension = path.extname(file).toLowerCase();
+    const audioType = { ".webm": "audio/webm", ".wav": "audio/wav", ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".ogg": "audio/ogg", ".mp3": "audio/mpeg" }[extension] || "application/octet-stream";
+    form.append("file", new Blob([bytes], { type: audioType }), `audio${extension || ".mp3"}`);
+    form.append("model", process.env.GROQ_ASR_MODEL || "whisper-large-v3-turbo");
+    form.append("language", "zh");
+    form.append("response_format", "verbose_json");
+    form.append("timestamp_granularities[]", "segment");
+    const response = await fetch(endpoint, { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form, signal: controller.signal });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      const error = new Error(response.status === 429 ? "Groq 免费语音额度或速率限制已用完，请稍后重试或手动粘贴逐字稿" : `Groq 语音转写失败 ${response.status}${detail ? `：${detail.slice(0, 300)}` : ""}`);
+      error.code = response.status === 429 ? "ASR_RATE_LIMITED" : "ASR_UPSTREAM_ERROR"; error.stage = "transcribe"; throw error;
+    }
+    const result = await response.json();
+    const segments = (result.segments || []).map((item) => ({ start: Number(item.start || 0), end: Number(item.end || 0), text: String(item.text || "").trim() })).filter((item) => item.text);
+    return { text: String(result.text || segments.map((item) => item.text).join("")), duration: Number(result.duration || 0) || null, segments };
+  } catch (error) {
+    if (error.name === "AbortError") { const timeoutError = new Error("Groq 语音转写超时，请稍后重新获取逐字稿"); timeoutError.code = "ASR_TIMEOUT"; timeoutError.stage = "transcribe"; throw timeoutError; }
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+
 const transcriptNormalizationSystem = `你是中文口语转写校对器。你的任务不是润色文案，而是恢复用户真实说话内容。只允许补标点、按自然停顿断句、修复上下文能明确判定的识别错误和专有名词、统一数字格式、删除明显的连续重复口误。保留“就是”“然后”“其实”“我感觉”等自然口语。禁止改变观点、重写表达、增加事实/经历/情绪、根据常识补故事、总结或升华。不能确定的词不要猜，保留原词，并放入 uncertainTerms。只返回 JSON：{"text":"","uncertainTerms":[{"original":"","reason":""}]} 。`;
 
 async function normalizeTranscript(rawTranscript, vocabulary = []) {
@@ -585,6 +617,7 @@ async function transcribeVideo(videoUrl) {
   if (!videoUrl) return null;
   const parsed = new URL(videoUrl);
   if (!/(^|\.)xhscdn\.com$/i.test(parsed.hostname)) throw new Error("视频源域名不受信任");
+  if (process.env.GROQ_API_KEY) return { ...(await extractAudio(videoUrl, transcribeFileWithGroq)), provider: "groq" };
   if (process.env.DASHSCOPE_API_KEY) return { ...(await extractAudio(videoUrl, transcribeFileWithDashScope)), provider: "dashscope" };
   if (process.env.OPENAI_API_KEY) return { ...(await transcribeWithOpenAI(videoUrl)), provider: "openai" };
   if (localAsrEnabled()) return { ...(await extractAudio(videoUrl, (audioFile) => transcribeLocalAudioWithFunASR(audioFile, { vocabulary: DEFAULT_CONTEXT_VOCABULARY }))), provider: "local-funasr" };
@@ -1310,7 +1343,7 @@ async function api(req, res) {
         let transcription;
         try {
           transcription = process.env.LOCAL_ASR_ENABLED === "false"
-            ? await transcribeLocalAudioWithDashScope(audioFile, { vocabulary })
+            ? process.env.GROQ_API_KEY ? await transcribeFileWithGroq(audioFile) : await transcribeLocalAudioWithDashScope(audioFile, { vocabulary })
             : await transcribeLocalAudioWithFunASR(audioFile, { vocabulary });
         } catch (error) {
           if (process.env.LOCAL_ASR_FALLBACK_CLOUD === "true" && process.env.DASHSCOPE_API_KEY) transcription = await transcribeLocalAudioWithDashScope(audioFile, { vocabulary });

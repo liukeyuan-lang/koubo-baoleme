@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "发送到口播爆了么",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "将当前打开的小红书单篇内容发送到口播爆了么进行拆解。",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://*.xiaohongshu.com/*", "https://*.xhslink.com/*", "https://*.up.railway.app/*", "http://127.0.0.1/*", "http://localhost/*"],

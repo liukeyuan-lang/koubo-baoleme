@@ -15,8 +15,36 @@ async function extractCurrentPost() {
     const barCounts = actionBarCounts();
     const bodyNode = first("#detail-desc", '[class*="desc"]', '[class*="note-content"]');
     const noteRoot = bodyNode?.closest('[role="dialog"], [class*="note-detail"], [class*="noteDetail"], [class*="note-container"], [class*="noteContainer"]') || document;
-    const commentNodes = [...noteRoot.querySelectorAll('[class*="comment-item"], [class*="commentItem"]')].slice(0, 50);
-    const comments = commentNodes.map((node) => ({ text: text(node.querySelector('[class*="content"]')) || text(node), author: text(node.querySelector('[class*="author"],a')), likeCount: text(node.querySelector('[class*="like"]')) })).filter((item) => item.text);
+    const commentSelectors = [
+      '.comments-container .parent-comment', '.comments-container .comment-item',
+      '[class*="comments-container"] [class*="parent-comment"]', '[class*="comments-container"] [class*="comment-item"]',
+      '[class*="comment-list"] [class*="comment-item"]', '[class*="commentList"] [class*="commentItem"]',
+      '[data-testid*="comment-item"]', '[class*="comment-item"]', '[class*="commentItem"]',
+    ];
+    const commentNodes = [];
+    const seenNodes = new Set();
+    for (const root of [noteRoot, document]) {
+      for (const selector of commentSelectors) {
+        root.querySelectorAll(selector).forEach((node) => {
+          if (!seenNodes.has(node)) { seenNodes.add(node); commentNodes.push(node); }
+        });
+      }
+    }
+    const contentSelectors = ['.note-text', '.comment-content', '.comment-text', '[class*="comment-content"]', '[class*="commentContent"]', '[class*="comment-text"]', '[class*="content"]'];
+    const authorSelectors = ['.user-info .name', '.author .name', '[class*="user-info"] [class*="name"]', '[class*="author"] [class*="name"]', '[class*="username"]', 'a[href*="/user/profile/"]'];
+    const likeSelectors = ['.like-wrapper .count', '[class*="like-wrapper"] [class*="count"]', '[class*="like"] [class*="count"]', '[aria-label*="点赞"]'];
+    const seenComments = new Set();
+    const comments = commentNodes.map((node) => {
+      const contentNode = contentSelectors.map((selector) => node.querySelector(selector)).find(Boolean);
+      const authorNode = authorSelectors.map((selector) => node.querySelector(selector)).find(Boolean);
+      const likeNode = likeSelectors.map((selector) => node.querySelector(selector)).find(Boolean);
+      const commentText = text(contentNode);
+      const author = text(authorNode);
+      const key = `${author}\n${commentText}`;
+      if (!commentText || seenComments.has(key)) return null;
+      seenComments.add(key);
+      return { text: commentText, author, likeCount: text(likeNode).match(countPattern)?.[0] || "" };
+    }).filter(Boolean).slice(0, 50);
     const title = text(firstIn(noteRoot, "#detail-title", '[class*="title"]', "h1")) || document.title.replace(/\s*[-_]\s*小红书.*$/, "");
     const body = text(bodyNode);
     const video = noteRoot.querySelector("video");

@@ -260,6 +260,24 @@
                 <button class="secondary-button" id="new-recording" type="button" hidden>再拍一条</button>
               </div>
               <p class="studio-status" id="studio-status">录像只保存在当前浏览器中，不会自动上传。</p>
+              <section class="quick-editor" id="quick-editor" hidden>
+                <div class="quick-editor-head"><div><p class="eyebrow">轻剪首版</p><h4>剪一下，直接发布</h4></div><span id="edit-duration-label">00:00</span></div>
+                <div class="template-options" id="edit-template-options">
+                  <button class="selected" data-edit-template="clean" type="button"><strong>干净知识</strong><small>清晰字幕·轻对比</small></button>
+                  <button data-edit-template="viral" type="button"><strong>爆点高亮</strong><small>高对比·关键词高亮</small></button>
+                  <button data-edit-template="warm" type="button"><strong>生活温暖</strong><small>暖色调·柔和画面</small></button>
+                </div>
+                <div class="edit-control-grid">
+                  <label><span>从第几秒开始</span><input id="edit-trim-start" type="number" min="0" step="0.1" value="0" /></label>
+                  <label><span>到第几秒结束</span><input id="edit-trim-end" type="number" min="0.2" step="0.1" /></label>
+                  <label><span>原声音量 <b id="edit-volume-label">100%</b></span><input id="edit-volume" type="range" min="0" max="150" value="100" /></label>
+                  <label><span>片头标题</span><input id="edit-intro-title" maxlength="80" placeholder="可选" /></label>
+                  <label><span>片尾文案</span><input id="edit-outro-text" maxlength="60" value="关注我，继续分享真实经验" /></label>
+                  <label class="edit-check"><input id="edit-highlight" type="checkbox" checked /><span>重点词自动高亮</span></label>
+                </div>
+                <div class="studio-actions"><button class="primary-button" id="render-recording-edit" type="button">生成剪辑版</button><span class="edit-status" id="recording-edit-status">待剪辑</span></div>
+                <div class="edited-preview" id="edited-preview" hidden><video id="edited-recording-preview" controls playsinline></video><a class="primary-button" id="download-edited-recording" download>下载剪辑版 MP4</a></div>
+              </section>
             </section>
           </section>
           <section class="feedback-panel">

@@ -376,6 +376,10 @@ let cameraStream = null;
 let mediaRecorder = null;
 let recordingChunks = [];
 let recordingUrl = "";
+let recordingMp4Blob = null;
+let recordingAssetId = "";
+let recordingDuration = 0;
+let recordingEditTemplate = "clean";
 let recordingTimer = null;
 let recordingStartedAt = 0;
 let speechFollower = null;
@@ -476,6 +480,10 @@ function prepareAnotherRecording({ discardCurrent = false } = {}) {
     $("#recording-preview").load();
     $("#export-recording").removeAttribute("href");
     $("#export-recording").hidden = true;
+    recordingMp4Blob = null;
+    recordingAssetId = "";
+    recordingDuration = 0;
+    $("#quick-editor").hidden = true;
   }
   recordingChunks = [];
   mediaRecorder = null;
@@ -1915,6 +1923,8 @@ $("#start-recording").addEventListener("click", () => {
         if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(errorData.error || "MP4 转换失败"); }
         mp4Blob = await response.blob();
       }
+      recordingMp4Blob = mp4Blob;
+      recordingAssetId = "";
       if (recordingUrl) URL.revokeObjectURL(recordingUrl);
       recordingUrl = URL.createObjectURL(mp4Blob);
       $("#recording-preview").src = recordingUrl;
@@ -1927,6 +1937,9 @@ $("#start-recording").addEventListener("click", () => {
       $("#retake-recording").hidden = false;
       $("#new-recording").hidden = false;
       $("#studio-status").textContent = "拍摄完成，可以预览或导出 MP4。";
+      $("#quick-editor").hidden = false;
+      $("#recording-edit-status").textContent = "可以裁剪并套用模板";
+      $("#edited-preview").hidden = true;
       updateShootPlan({ prepared: true, filmed: true });
       renderShootPlan(true);
     } catch (error) {
@@ -1963,6 +1976,63 @@ $("#new-recording").addEventListener("click", () => { recordEvent("recording_new
 $("#prompter-prev").addEventListener("click", () => renderPrompter(prompterIndex - 1));
 $("#prompter-next").addEventListener("click", () => renderPrompter(prompterIndex + 1));
 $("#prompter-size").addEventListener("input", (event) => { $("#teleprompter-script").style.fontSize = `${event.target.value}px`; });
+
+$("#recording-preview").addEventListener("loadedmetadata", () => {
+  recordingDuration = Number($("#recording-preview").duration || 0);
+  $("#edit-trim-end").value = recordingDuration.toFixed(1);
+  $("#edit-trim-end").max = recordingDuration.toFixed(1);
+  $("#edit-trim-start").max = Math.max(0, recordingDuration - 0.2).toFixed(1);
+  $("#edit-duration-label").textContent = clock(recordingDuration);
+  $("#edit-intro-title").value = (state.lastScript?.titles?.[0] || state.lastScript?.title || "").slice(0, 80);
+});
+$("#edit-template-options").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-template]");
+  if (!button) return;
+  recordingEditTemplate = button.dataset.editTemplate;
+  $("#edit-template-options").querySelectorAll("button").forEach((item) => item.classList.toggle("selected", item === button));
+});
+$("#edit-volume").addEventListener("input", (event) => { $("#edit-volume-label").textContent = `${event.target.value}%`; });
+
+async function pollRecordingEdit(jobId) {
+  while (true) {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const data = await api(`/api/recording-edit-jobs?id=${encodeURIComponent(jobId)}`);
+    $("#recording-edit-status").textContent = data.job.label || "正在剪辑";
+    if (data.job.status === "failed") throw new Error(data.job.error || "剪辑失败");
+    if (data.job.status === "complete") return data.job;
+  }
+}
+
+$("#render-recording-edit").addEventListener("click", async () => {
+  if (!recordingMp4Blob) { $("#recording-edit-status").textContent = "请先完成一次拍摄"; return; }
+  const start = Math.max(0, Number($("#edit-trim-start").value || 0));
+  const end = Math.min(recordingDuration, Number($("#edit-trim-end").value || recordingDuration));
+  if (!(end > start + 0.1)) { $("#recording-edit-status").textContent = "结束时间需要晚于开始时间"; return; }
+  const button = $("#render-recording-edit");
+  button.disabled = true;
+  $("#edited-preview").hidden = true;
+  try {
+    if (!recordingAssetId) {
+      $("#recording-edit-status").textContent = "正在上传原片";
+      const authorization = authState.session?.access_token ? { Authorization: `Bearer ${authState.session.access_token}` } : {};
+      const response = await fetch("/api/recording-assets", { method: "POST", headers: { "Content-Type": "video/mp4", ...authorization }, body: recordingMp4Blob });
+      const uploaded = await response.json();
+      if (!response.ok) throw new Error(uploaded.error || "原片上传失败");
+      recordingAssetId = uploaded.asset.id;
+    }
+    $("#recording-edit-status").textContent = "正在创建剪辑任务";
+    const created = await api("/api/recording-edit-jobs", { assetId: recordingAssetId, trimStart: start, trimEnd: end, volume: Number($("#edit-volume").value) / 100, template: recordingEditTemplate, captionText: prompterDraftLines.join("\n") || currentFinalScriptLines().join("\n"), highlightKeywords: $("#edit-highlight").checked, introTitle: $("#edit-intro-title").value.trim(), outroText: $("#edit-outro-text").value.trim() });
+    const job = await pollRecordingEdit(created.job.id);
+    $("#edited-recording-preview").src = job.videoUrl;
+    $("#download-edited-recording").href = job.videoUrl;
+    $("#download-edited-recording").download = `口播剪辑版-${recordingEditTemplate}.mp4`;
+    $("#edited-preview").hidden = false;
+    $("#recording-edit-status").textContent = `剪辑完成 · ${Math.round(job.duration || 0)} 秒 · 1080 × 1920`;
+    recordEvent("recording_edit_complete", { template: recordingEditTemplate, duration: job.duration });
+  } catch (error) {
+    $("#recording-edit-status").textContent = `剪辑失败：${error.message}`;
+  } finally { button.disabled = false; }
+});
 
 $("#save-story").addEventListener("click", () => {
   saveCollection("koubo-content-assets", { type: "story", content: state.lastInput.currentMaterial, sourceProjectId: state.currentProjectId, createdAt: new Date().toISOString() });

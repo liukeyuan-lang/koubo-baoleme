@@ -24,8 +24,12 @@ const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=u
 const VIDEO_ROOT = path.join(__dirname, "video-poc");
 const VIDEO_ASSETS = path.join(VIDEO_ROOT, "assets");
 const VIDEO_JOBS = path.join(VIDEO_ROOT, "jobs");
-for (const directory of [VIDEO_ROOT, VIDEO_ASSETS, VIDEO_JOBS]) fs.mkdirSync(directory, { recursive: true });
+const RECORDING_ASSETS = path.join(VIDEO_ROOT, "recordings");
+const RECORDING_EDIT_JOBS = path.join(VIDEO_ROOT, "recording-edits");
+for (const directory of [VIDEO_ROOT, VIDEO_ASSETS, VIDEO_JOBS, RECORDING_ASSETS, RECORDING_EDIT_JOBS]) fs.mkdirSync(directory, { recursive: true });
 const videoJobs = new Map();
+const recordingAssets = new Map();
+const recordingEditJobs = new Map();
 const sourceParseJobs = new Map();
 const transcriptionJobs = new Map();
 const sourceRateLimits = new Map();
@@ -79,6 +83,27 @@ function startVideoJob(input) {
   const child = spawn(process.execPath, [path.join(__dirname, "scripts", "video-poc-render.js"), directory], { cwd: __dirname, windowsHide: true }); let errorText = "";
   child.stderr.on("data", (chunk) => { errorText += chunk.toString(); });
   child.on("exit", (code) => { try { const result = JSON.parse(fs.readFileSync(path.join(directory, "result.json"), "utf8")); Object.assign(job, result, { status: "complete", label: "生成完成", videoUrl: `/video-poc/jobs/${id}/output.mp4` }); } catch { Object.assign(job, { status: "failed", label: "生成失败", error: errorText.trim().split(/\r?\n/).slice(-3).join("；") || `渲染进程退出（${code}）` }); } });
+  return job;
+}
+
+function startRecordingEditJob(input) {
+  const id = crypto.randomUUID();
+  const directory = path.join(RECORDING_EDIT_JOBS, id);
+  fs.mkdirSync(directory, { recursive: true });
+  fs.writeFileSync(path.join(directory, "input.json"), JSON.stringify(input, null, 2));
+  const job = { id, status: "running", label: "正在准备剪辑", createdAt: new Date().toISOString() };
+  recordingEditJobs.set(id, job);
+  const child = spawn(process.execPath, [path.join(__dirname, "scripts", "recording-edit-render.js"), directory], { cwd: __dirname, windowsHide: true });
+  let errorText = "";
+  child.stderr.on("data", (chunk) => { errorText += chunk.toString(); });
+  child.on("exit", (code) => {
+    try {
+      const result = JSON.parse(fs.readFileSync(path.join(directory, "result.json"), "utf8"));
+      Object.assign(job, result, { status: "complete", label: "剪辑完成", videoUrl: `/video-poc/recording-edits/${id}/output.mp4` });
+    } catch {
+      Object.assign(job, { status: "failed", label: "剪辑失败", error: errorText.trim().split(/\r?\n/).slice(-4).join("；") || `剪辑进程退出（${code}）` });
+    }
+  });
   return job;
 }
 
@@ -1327,6 +1352,31 @@ async function api(req, res) {
       const requestedName = String(requestUrl.searchParams.get("name") || "口播录像").replace(/[\\/:*?"<>|\r\n]/g, "-").slice(0, 120) || "口播录像";
       res.writeHead(200, { "Content-Type": "video/mp4", "Content-Length": mp4.length, "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(`${requestedName}.mp4`)}`, "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" });
       return res.end(mp4);
+    }
+    if (requestUrl.pathname === "/api/recording-assets" && req.method === "POST") {
+      const contentType = String(req.headers["content-type"] || "").split(";")[0].toLowerCase();
+      if (contentType !== "video/mp4") return send(res, 415, { ok: false, error: "剪辑原片需要是 MP4" });
+      const buffer = await rawBody(req, Number(process.env.RECORDING_MAX_MB || 512) * 1024 * 1024);
+      if (buffer.length < 1024) return send(res, 422, { ok: false, error: "录像文件为空或不完整" });
+      const id = crypto.randomUUID();
+      const file = path.join(RECORDING_ASSETS, `${id}.mp4`);
+      fs.writeFileSync(file, buffer);
+      recordingAssets.set(id, { id, path: file, size: buffer.length, createdAt: Date.now() });
+      return send(res, 201, { ok: true, asset: { id, size: buffer.length } });
+    }
+    if (requestUrl.pathname === "/api/recording-edit-jobs" && req.method === "POST") {
+      const input = await body(req);
+      const asset = recordingAssets.get(String(input.assetId || ""));
+      if (!asset || !fs.existsSync(asset.path)) return send(res, 404, { ok: false, error: "剪辑原片不存在，请重新拍摄" });
+      const job = startRecordingEditJob({ sourcePath: asset.path, trimStart: input.trimStart, trimEnd: input.trimEnd, volume: input.volume, template: input.template, captionText: String(input.captionText || "").slice(0, 5000), highlightKeywords: input.highlightKeywords !== false, introTitle: String(input.introTitle || "").slice(0, 80), outroText: String(input.outroText || "").slice(0, 60) });
+      return send(res, 202, { ok: true, job });
+    }
+    if (requestUrl.pathname === "/api/recording-edit-jobs" && req.method === "GET") {
+      const job = recordingEditJobs.get(requestUrl.searchParams.get("id"));
+      if (!job) return send(res, 404, { ok: false, error: "剪辑任务不存在或服务已重启" });
+      const statusFile = path.join(RECORDING_EDIT_JOBS, job.id, "status.json");
+      if (job.status === "running" && fs.existsSync(statusFile)) { try { Object.assign(job, JSON.parse(fs.readFileSync(statusFile, "utf8"))); } catch {} }
+      return send(res, 200, { ok: true, job });
     }
     if (requestUrl.pathname === "/api/transcribe-audio" && req.method === "POST") {
       const input = await body(req);

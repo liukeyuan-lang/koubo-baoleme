@@ -9,6 +9,8 @@ const scenarios = {
   B: normalizeEditContract({ userGoal: "删掉啰嗦重复", feedbackLevels: ["STRUCTURE"], primaryFeedbackLevel: "STRUCTURE", rollbackTo: "GLOBAL_DIAGNOSIS", scope: "CROSS_SECTION", changeMagnitude: "MEDIUM", preserve: ["facts", "conclusion"], allowedChanges: ["structure", "length", "sectionOrder"] }),
   C: normalizeEditContract({ userGoal: "改得像本人说话", feedbackLevels: ["EXPRESSION"], primaryFeedbackLevel: "EXPRESSION", rollbackTo: "SCRIPT", scope: "GLOBAL", changeMagnitude: "MEDIUM", preserve: ["facts", "conclusion", "contentDirection", "structure"], allowedChanges: ["wording", "tone"] }),
   D: normalizeEditContract({ userGoal: "拒绝当前方向和虚弱案例", feedbackLevels: ["EVIDENCE", "DIRECTION"], primaryFeedbackLevel: "DIRECTION", rejectsCurrentDirection: true, rollbackTo: "CONTENT_DIRECTION", scope: "GLOBAL", changeMagnitude: "HIGH", preserve: ["facts"], allowedChanges: ["contentDirection", "conclusion", "angle", "strategy", "examples", "structure"], needsEvidence: true, evidenceKind: "PERSONAL" }),
+  E: normalizeEditContract({ userGoal: "这里读起来还没有把那个意思真正说开", feedbackLevels: ["STRUCTURE"], primaryFeedbackLevel: "STRUCTURE", rollbackTo: "GLOBAL_DIAGNOSIS", scope: "LOCAL", changeMagnitude: "MEDIUM", expansionMode: "EXPRESSIVE", preserve: ["facts", "conclusion"], allowedChanges: ["structure"], needsEvidence: true, evidenceKind: "PERSONAL" }),
+  F: normalizeEditContract({ userGoal: "再加入一个你实际做过的项目过程", feedbackLevels: ["EVIDENCE"], primaryFeedbackLevel: "EVIDENCE", rollbackTo: "EVIDENCE_CHECK", scope: "LOCAL", changeMagnitude: "MEDIUM", expansionMode: "FACTUAL", preserve: ["facts"], allowedChanges: ["examples"], needsEvidence: false, evidenceKind: "PERSONAL" }),
 };
 
 async function testDStopsWithoutEvidence() {
@@ -36,6 +38,11 @@ async function main() {
   assert(paths.C.includes("SCRIPT_DIAGNOSIS") && !paths.C.includes("STRATEGY_REBUILD"));
   assert(paths.D.includes("CONTENT_DIRECTION_REBUILD") && paths.D.includes("STRATEGY_REBUILD") && paths.D.includes("SCRIPT_REGENERATE"));
   assert(!scenarios.D.preserve.includes("conclusion") && !scenarios.D.preserve.includes("contentDirection"));
+  assert.strictEqual(scenarios.E.expansionMode, "EXPRESSIVE");
+  assert.strictEqual(scenarios.E.needsEvidence, false, "表达性展开不应被强制要求新证据");
+  assert(["length", "wording", "transition", "explanation"].every((change) => scenarios.E.allowedChanges.includes(change)), "表达性展开应放开表达所需维度");
+  assert.strictEqual(scenarios.F.expansionMode, "FACTUAL");
+  assert.strictEqual(scenarios.F.needsEvidence, true, "信息性扩充必须要求证据");
   const d = await testDStopsWithoutEvidence();
   console.log(JSON.stringify({ passed: true, paths, dEvidenceGap: d.editorialDiagnosis.evidenceGap, dPlan: d.editorialDiagnosis.editorialPlan }, null, 2));
 }

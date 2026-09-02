@@ -118,7 +118,7 @@ async function runFixture(item) {
   if (JSON.stringify(result.meta.editorialValidation) !== JSON.stringify(finalValidation)) throw new Error(`${item.name}: editorialValidation兼容字段没有指向finalValidation`);
   const forbiddenHits = item.forbidden.filter((word) => afterText.includes(word));
   if (forbiddenHits.length) throw new Error(`${item.name}: 出现禁止内容 ${forbiddenHits.join("、")}`);
-  if (result.meta.editorCallCount > 5) throw new Error(`${item.name}: Content Editor调用超过一次定向返修上限`);
+  if (result.meta.editorCallCount > 6) throw new Error(`${item.name}: Content Editor调用超过一次定向返修及重新校验上限`);
   const realDiff = result.meta.realDiff || result.script?.realDiff;
   const verified = result.meta.verifiedAppliedActions || result.script?.verifiedAppliedActions;
   if (!realDiff?.sections?.length) throw new Error(`${item.name}: 缺少真实section-level Diff`);

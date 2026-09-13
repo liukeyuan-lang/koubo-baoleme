@@ -1357,7 +1357,9 @@ async function api(req, res) {
     if (requestUrl.pathname === "/api/miniprogram/webar/auth" && req.method === "GET") {
       const user = await authenticateUser(req);
       if (user.sessionType !== "miniprogram") return send(res, 403, { ok: false, code: "CLIENT_SCOPE_DENIED", error: "该接口仅用于小程序美颜鉴权" });
-      return send(res, 200, { ok: true, beauty: webarAuthorization() });
+      const beauty = webarAuthorization();
+      if (!beauty.configured) return send(res, 503, { ok: false, code: "WEBAR_NOT_CONFIGURED", error: "美颜服务端签名配置不完整" });
+      return send(res, 200, { ok: true, beauty });
     }
     const publicApi = requestUrl.pathname === "/api/health" || requestUrl.pathname === "/api/import-browser-post";
     if (supabaseConfigured() && !publicApi) req.authUser = await supabaseUser(req);

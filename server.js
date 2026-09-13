@@ -1,4 +1,5 @@
 const http = require("http");
+const { ClientSessions } = require("./lib/auth/client-sessions");
 const fs = require("fs");
 const path = require("path");
 const { execFile, spawn } = require("child_process");
@@ -14,11 +15,18 @@ const { runContentEditor, runEvidenceRevision } = require("./lib/content-editor"
 const { confirmEvidence, detectEvidenceGap, webResearch } = require("./lib/evidence-research");
 const { createGenerationContext, runGenerationPipeline } = require("./lib/generation-pipeline");
 const { convertRecordingBufferToMp4 } = require("./lib/recording-export");
+const { webarAuthorization } = require("./lib/webar-auth");
 const ffmpegPath = require("ffmpeg-static");
 const execFileAsync = promisify(execFile);
 
 loadEnv(path.join(__dirname, ".env"));
 const PORT = Number(process.env.PORT || 4173);
+const clientSessions = new ClientSessions({ directory: process.env.MINIPROGRAM_SESSION_DIR || path.join(__dirname, "data/private-auth") });
+async function authenticateUser(req) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+  if (token.startsWith("kbm_")) return clientSessions.authenticate(req, token);
+  return supabaseUser(req);
+}
 const MAX_BODY = 2 * 1024 * 1024;
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".mp4": "video/mp4", ".wav": "audio/wav", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
 const VIDEO_ROOT = path.join(__dirname, "video-poc");
@@ -1333,7 +1341,24 @@ async function api(req, res) {
     if (req.method === "OPTIONS") { res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" }); return res.end(); }
     const requestUrl = new URL(req.url, `http://${req.headers.host || "127.0.0.1"}`);
     if (requestUrl.pathname === "/api/public-config" && req.method === "GET") return send(res, 200, { supabase: supabaseConfigured() ? supabaseConfig() : null });
-    if (requestUrl.pathname === "/api/auth/me" && req.method === "GET") return send(res, 200, { user: await supabaseUser(req) });
+    if (req.method === "POST" && ["/api/auth/wechat/login", "/api/auth/dev/login", "/api/auth/refresh"].includes(requestUrl.pathname)) {
+      const input = await body(req);
+      const session = requestUrl.pathname.endsWith("/wechat/login") ? await clientSessions.wechatLogin(req, input)
+        : requestUrl.pathname.endsWith("/dev/login") ? await clientSessions.devLogin(req, input) : clientSessions.refresh(req, input);
+      return send(res, 200, { ok: true, session });
+    }
+    if (requestUrl.pathname === "/api/auth/me" && req.method === "GET") return send(res, 200, { user: await authenticateUser(req) });
+    if (requestUrl.pathname === "/api/auth/logout" && req.method === "POST") {
+      const user = await authenticateUser(req);
+      if (user.sessionType !== "miniprogram") return send(res, 400, { ok: false, error: "Web 请继续使用原 Supabase 退出接口" });
+      clientSessions.logout(String(req.headers.authorization || "").replace(/^Bearer\s+/i, ""));
+      return send(res, 200, { ok: true });
+    }
+    if (requestUrl.pathname === "/api/miniprogram/webar/auth" && req.method === "GET") {
+      const user = await authenticateUser(req);
+      if (user.sessionType !== "miniprogram") return send(res, 403, { ok: false, code: "CLIENT_SCOPE_DENIED", error: "该接口仅用于小程序美颜鉴权" });
+      return send(res, 200, { ok: true, beauty: webarAuthorization() });
+    }
     const publicApi = requestUrl.pathname === "/api/health" || requestUrl.pathname === "/api/import-browser-post";
     if (supabaseConfigured() && !publicApi) req.authUser = await supabaseUser(req);
     if (requestUrl.pathname === "/api/extension-token" && req.method === "POST") {
@@ -1805,7 +1830,7 @@ async function api(req, res) {
     }
     return send(res, 404, { ok: false, error: "接口不存在" });
   } catch (error) {
-    const status = error.code === "AUTH_REQUIRED" || error.code === "AUTH_INVALID" ? 401 : error.code === "LLM_NOT_CONFIGURED" ? 503 : error.code === "AI_TIMEOUT" ? 504 : error.code === "AI_UPSTREAM_ERROR" ? 502 : 422;
+    const status = error.status || (error.code === "AUTH_REQUIRED" || error.code === "AUTH_INVALID" ? 401 : error.code === "LLM_NOT_CONFIGURED" ? 503 : error.code === "AI_TIMEOUT" ? 504 : error.code === "AI_UPSTREAM_ERROR" ? 502 : 422);
     const messages = { AI_TIMEOUT: "AI 处理时间有点长，本次请求已停止，请重试。", AI_NETWORK_ERROR: "暂时无法连接 AI 服务，请稍后重试。", AI_UPSTREAM_ERROR: "AI 服务暂时不可用，请稍后重试。", AI_INVALID_RESPONSE: "AI 返回结果不完整，请重新生成。" };
     return send(res, status, { ok: false, code: error.code || "REQUEST_FAILED", error: messages[error.code] || error.message, ...(error.checks ? { checks: error.checks } : {}) });
   }
